@@ -22,7 +22,7 @@ function varargout = qcmgradient2(varargin)
 
 % Edit the above text to modify the response to help qcmgradient2
 
-% Last Modified by GUIDE v2.5 07-Jul-2016 10:50:18
+% Last Modified by GUIDE v2.5 18-Jul-2016 11:36:14
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -232,14 +232,15 @@ switch selection,
 end
 
 function handles = calc_Callback(hObject, eventdata, handles)
-handles = calcqcm(hObject, handles)
-handles = findsolution(hObject, eventdata, handles)
+handles = calcqcm(hObject, handles);
+handles = findsolution(hObject, eventdata, handles);
 
 function handles = calcqcm(hObject, handles)
 %	Function to predict the QCM response to a multilayer system of curing
 %   layer with a gradient of properties
 f1=handles.f1;
 zq=handles.zq;
+handles = checkrheology(hObject, handles);
 nh=handles.rheology.nh;
 layerprops=getlayerprops(hObject, handles);
 delfstar=calcdelfstar(f1,zq,layerprops,nh);
@@ -266,7 +267,6 @@ else
 end
 
 % add point to property plot
-
 function delfstar=calcdelfstar(f1,zq,layerprops,nhvals)
 struct2var(layerprops)
 rho=rho*1000;  % convert to kg/m^3
@@ -313,12 +313,7 @@ plotgradient(hObject, handles);
 handles = findsolution(hObject, eventdata, handles);
 
 function plotgradient(hObject,handles)
-try
-    rheology=handles.rheology;
-catch
-    rheology=getrheology(hObject, handles);
-    handles.rheology = rheology;
-end
+[handles, rheology] = checkrheology(hObject, handles);
 layerprops=getlayerprops(hObject,handles);
 nlayers=layerprops.nlayers;
 d=layerprops.d;
@@ -1302,9 +1297,11 @@ set(handles.thickness, 'string', num2str(thickness, 3));
 % thickness that was just changed has a corresponding modulus value, update
 % the figure.
 where = eventdata.Indices;
-if where(2) == 1 && ~isempty(layerdata{where(1), where(2)})
+if where(2) == 1 && ~isempty(layerdata{where(1), 2}) %The thickness was updated and there is a corresponding layer data
     update_Callback(hObject, eventdata, handles);
-else
+elseif where(2) == 1
+    return
+else %Layer properties were changed, check that they are valid
    if str2num(layerdata{where(1), where(2)}) < 0 || str2num(layerdata{where(1), where(2)}) > 1
        warndlg(['You have entered a relative modulus value outside the '...
            'limits of 0 to 1. Please enter a value between 0 and 1.']);
@@ -1312,4 +1309,54 @@ else
    else
        update_Callback(hObject, eventdata, handles);
    end
+end
+
+function [lowdelfstar, highdelfstar] = calcerrorrange(hObject, handles)
+f1=handles.f1;
+zq=handles.zq;
+handles = checkrheology(hObject, handles);
+nh=handles.rheology.nh;
+layerprops=getlayerprops(hObject, handles);
+highlayerprops = layerprops;
+lowlayerprops = layerprops;
+pererror = str2num(get(handles.herrorpercent, 'string'));
+if isempty(pererror)
+    warndlg('You need to enter an error value')
+    lowdelfstar = [];
+    highdelfstar = [];
+    return
+elseif pererror > 1 && pererror < 100
+    pererror = pererror/100;
+elseif pererror > 100
+    warndlg('Your error is too big')
+    lowdelfstar = [];
+    highdelfstar = [];
+    return
+end
+
+for i = 1:layerprops.nlayers
+    highlayerprops.subthickness(i) = layerprops.subthickness(i)*(1+pererror);
+    lowlayerprops.subthickness(i) = layerprops.subthickness(i)*(1-pererror);
+end
+
+highdelfstar=calcdelfstar(f1,zq,highlayerprops,nh);
+lowdelfstar=calcdelfstar(f1,zq,lowlayerprops,nh);
+
+% --- Executes on button press in herror.
+function herror_Callback(hObject, eventdata, handles)
+[lowdelfstar, highdelfstar] = calcerrorrange(hObject, handles);
+
+function herrorpercent_Callback(hObject, eventdata, handles)
+
+function herrorpercent_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function [handles, rheology] = checkrheology(hObject, handles)
+try
+    rheology = handles.rheology;
+catch
+    rheology = getrheology(hObject, handles);
+    handles.rheology = rheology;
 end
