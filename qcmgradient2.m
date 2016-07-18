@@ -234,6 +234,7 @@ end
 function handles = calc_Callback(hObject, eventdata, handles)
 handles = calcqcm(hObject, handles);
 handles = findsolution(hObject, eventdata, handles);
+set(handles.herrorresults, 'string', '')
 
 function handles = calcqcm(hObject, handles)
 %	Function to predict the QCM response to a multilayer system of curing
