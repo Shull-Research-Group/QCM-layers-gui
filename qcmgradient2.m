@@ -232,6 +232,7 @@ switch selection,
 end
 
 function handles = calc_Callback(hObject, eventdata, handles)
+plotgradient(hObject, handles);
 handles = calcqcm(hObject, handles);
 handles = findsolution(hObject, eventdata, handles);
 
@@ -243,6 +244,10 @@ zq=handles.zq;
 handles = checkrheology(hObject, handles);
 nh=handles.rheology.nh;
 layerprops=getlayerprops(hObject, handles);
+if isempty(layerprops)
+    warndlg('No layer data entered. Please enter data')
+    return
+end
 delfstar=calcdelfstar(f1,zq,layerprops,nh);
 if get(handles.nh1,'value')
     set(handles.delf1,'string',commanumber(real(delfstar(1))));
@@ -315,6 +320,10 @@ handles = findsolution(hObject, eventdata, handles);
 function plotgradient(hObject,handles)
 [handles, rheology] = checkrheology(hObject, handles);
 layerprops=getlayerprops(hObject,handles);
+if isempty(layerprops)
+    warndlg('No layer data entered. Please enter data')
+    return
+end
 nlayers=layerprops.nlayers;
 d=layerprops.d;
 subthickness=layerprops.subthickness;
@@ -373,7 +382,10 @@ plotproperties(hObject, handles);
 function plotproperties(hObject, handles)
 rheology=handles.rheology;
 layerprops=getlayerprops(hObject,handles);
-
+if isempty(layerprops)
+    warndlg('No layer data entered. Please enter data')
+    return
+end
 % get the x and y data based on the dropdown menus
 [xplotdata]=getaxesdata(handles.x2dataselect,rheology,layerprops);
 xdata=xplotdata.data;
@@ -601,6 +613,10 @@ else
         nlayers = max(size(layerdata)); %This should be however many rows there are in the table
     end
     layerrepeats = 1;
+    if nlayers == 0
+        layerprops = [];
+        return
+    end
 end
 
 %add other layer-related properties to the layerprops structure
@@ -802,9 +818,8 @@ elseif get(handles.rheologyrubber, 'value')
         end
     end
 elseif get(handles.rheologycustom, 'value')
-    set(handles.ming, 'string', get(handles.G1, 'string'));
-    set(handles.maxg, 'string', get(handles.G2, 'string'));
-      
+    set(handles.ming, 'string', num2str(str2num(get(handles.G1, 'string'))./(rho/1000),'%0.2g'));
+    set(handles.maxg, 'string', num2str(str2num(get(handles.G2, 'string'))./(rho/1000),'%0.2g'));
     npoints=2;
     
     try
@@ -1317,6 +1332,10 @@ zq=handles.zq;
 handles = checkrheology(hObject, handles);
 nh=handles.rheology.nh;
 layerprops=getlayerprops(hObject, handles);
+if isempty(layerprops)
+    warndlg('No layer data entered. Please enter data')
+    return
+end
 highlayerprops = layerprops;
 lowlayerprops = layerprops;
 pererror = str2num(get(handles.herrorpercent, 'string'));
