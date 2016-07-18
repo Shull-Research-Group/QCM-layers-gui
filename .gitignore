@@ -2,3 +2,5 @@
 *.asv
 *.png
 *.rtf
+
+SLMtools/*
