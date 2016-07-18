@@ -22,7 +22,7 @@ function varargout = qcmgradient2(varargin)
 
 % Edit the above text to modify the response to help qcmgradient2
 
-% Last Modified by GUIDE v2.5 18-Jul-2016 11:36:14
+% Last Modified by GUIDE v2.5 18-Jul-2016 13:24:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -72,7 +72,7 @@ function ming_CreateFcn(hObject, eventdata, handles)
 
 function maxg_Callback(hObject, eventdata, handles)
 % we need to set maximum possible value of g to G0
-rheology=handles.rheology;
+[handles, rheology] = checkrheology(hObject, handles)
 [nh, legendtext]=getharmonics(hObject, handles);
 if str2num(get(handles.maxg,'string')) > max(rheology.g(max(nh),:))
     str=sprintf('%0.3e', max(rheology.g(max(nh),:)));
@@ -235,6 +235,7 @@ function handles = calc_Callback(hObject, eventdata, handles)
 plotgradient(hObject, handles);
 handles = calcqcm(hObject, handles);
 handles = findsolution(hObject, eventdata, handles);
+set(handles.herrorresults, 'string', '')
 
 function handles = calcqcm(hObject, handles)
 %	Function to predict the QCM response to a multilayer system of curing
@@ -1360,6 +1361,13 @@ end
 
 highdelfstar=calcdelfstar(f1,zq,highlayerprops,nh);
 lowdelfstar=calcdelfstar(f1,zq,lowlayerprops,nh);
+foutputstring = '';
+goutputstring = [];
+for i = 1:2:5
+    foutputstring = sprintf('%s%2.0f - %2.0f\n', foutputstring, real(lowdelfstar(i)), real(highdelfstar(i)));
+    goutputstring = sprintf('%s%1.0f - %1.0f\n', goutputstring, imag(lowdelfstar(i)), imag(highdelfstar(i)));
+end
+set(handles.herrorresults, 'string', [foutputstring goutputstring])
 
 % --- Executes on button press in herror.
 function herror_Callback(hObject, eventdata, handles)
