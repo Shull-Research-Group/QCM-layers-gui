@@ -72,7 +72,7 @@ function ming_CreateFcn(hObject, eventdata, handles)
 
 function maxg_Callback(hObject, eventdata, handles)
 % we need to set maximum possible value of g to G0
-rheology=handles.rheology;
+[handles, rheology] = checkrheology(hObject, handles)
 [nh, legendtext]=getharmonics(hObject, handles);
 if str2num(get(handles.maxg,'string')) > max(rheology.g(max(nh),:))
     str=sprintf('%0.3e', max(rheology.g(max(nh),:)));
