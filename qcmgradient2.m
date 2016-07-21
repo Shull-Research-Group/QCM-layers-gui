@@ -610,10 +610,12 @@ if get(handles.modelparameters, 'value')
     end
 else
     layerdata = handles.layerpropertytable.Data;
-    nlayers = find(cellfun('isempty', layerdata),1)-1; %This finds the first empty cell, so the number of layers is one less than that.   
-    if isempty(nlayers) %If all of the layers are full by some chance...
-        nlayers = max(size(layerdata)); %This should be however many rows there are in the table
+    for i = 1:7
+        if ~get(handles.(['layer' num2str(i)]), 'value')
+            break
+        end
     end
+    nlayers = i-1;
     layerrepeats = 1;
     if nlayers == 0
         layerprops = [];
@@ -1328,6 +1330,8 @@ else %Layer properties were changed, check that they are valid
        update_Callback(hObject, eventdata, handles);
    end
 end
+handles.layer = []; %The data isn't the same as it was for whatever was saved.
+guidata(hObject, handles)
 
 function [lowdelfstar, highdelfstar] = calcerrorrange(hObject, handles)
 f1=handles.f1;
@@ -1413,6 +1417,7 @@ set(handles.delgcalc5, 'string', commanumber(layer(end).meandg(5)))
 
 set(handles.(['layer' num2str(max(size(layer)))]), 'value', 1);
 setlayercheckmarks(hObject, handles, max(size(layer)));
+set(handles.thickness, 'string', num2str(layer(end).d, 3));
 
 handles.layer = layer;
 
@@ -1448,4 +1453,21 @@ for i = 1:7
     set(handles.(['layer' num2str(i)]), 'value', i<=number);
 end
 set(handles.(['layer' num2str(number)]), 'value', toggle)
+drawnow;
+calc_Callback(hObject, 0, handles)
+
+if isstruct(handles.layer) %If there's data saved, update the displayed df and dg data
+    if toggle
+        numlayer = number;
+    else
+        numlayer =  number - 1;
+    end
+    set(handles.delfcalc1, 'string', commanumber(handles.layer(numlayer).meandf(1)))
+    set(handles.delfcalc3, 'string', commanumber(handles.layer(numlayer).meandf(3)))
+    set(handles.delfcalc5, 'string', commanumber(handles.layer(numlayer).meandf(5)))
+    set(handles.delgcalc1, 'string', commanumber(handles.layer(numlayer).meandg(1)))
+    set(handles.delgcalc3, 'string', commanumber(handles.layer(numlayer).meandg(3)))
+    set(handles.delgcalc5, 'string', commanumber(handles.layer(numlayer).meandg(5)))  
+    set(handles.thickness, 'string', num2str(handles.layer(numlayer).d, 3));
+end
     
