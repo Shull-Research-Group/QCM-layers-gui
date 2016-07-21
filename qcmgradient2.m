@@ -22,7 +22,7 @@ function varargout = qcmgradient2(varargin)
 
 % Edit the above text to modify the response to help qcmgradient2
 
-% Last Modified by GUIDE v2.5 18-Jul-2016 13:24:01
+% Last Modified by GUIDE v2.5 21-Jul-2016 13:30:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,6 +52,7 @@ handles.f1=5e6;
 set(hObject,'CloseRequestFcn',@closeGUI)
 set(0,'defaultlinelinewidth',2)
 addpath('SLMtools')
+handles.layer = [];
 guidata(hObject, handles);
 
 function varargout = qcmgradient2_OutputFcn(hObject, eventdata, handles)
@@ -609,10 +610,12 @@ if get(handles.modelparameters, 'value')
     end
 else
     layerdata = handles.layerpropertytable.Data;
-    nlayers = find(cellfun('isempty', layerdata),1)-1; %This finds the first empty cell, so the number of layers is one less than that.   
-    if isempty(nlayers) %If all of the layers are full by some chance...
-        nlayers = max(size(layerdata)); %This should be however many rows there are in the table
+    for i = 1:7
+        if ~get(handles.(['layer' num2str(i)]), 'value')
+            break
+        end
     end
+    nlayers = i-1;
     layerrepeats = 1;
     if nlayers == 0
         layerprops = [];
@@ -1274,16 +1277,17 @@ end
 assignin('base', 'grho', grho)
 assignin('base', 'phi', phi)
 
-% --- Executes on button press in modelparameters.
 function modelparameters_Callback(hObject, eventdata, handles)
 %Switches which panel is showing for entering the layer properties and
 %thicknesses.
 if get(handles.modelparameters, 'value')
     set(handles.modelpanel, 'visible', 'on')
     set(handles.fitpanel, 'visible', 'off')
+    handles.layer = [];
 else
     set(handles.modelpanel, 'visible', 'off')
     set(handles.fitpanel, 'visible', 'on')
+    handles.layer = [];
 end
 
 for n = 1:2:5 
@@ -1326,6 +1330,8 @@ else %Layer properties were changed, check that they are valid
        update_Callback(hObject, eventdata, handles);
    end
 end
+handles.layer = []; %The data isn't the same as it was for whatever was saved.
+guidata(hObject, handles)
 
 function [lowdelfstar, highdelfstar] = calcerrorrange(hObject, handles)
 f1=handles.f1;
@@ -1387,3 +1393,88 @@ catch
     rheology = getrheology(hObject, handles);
     handles.rheology = rheology;
 end
+
+function importlayers_Callback(hObject, eventdata, handles)
+handles.layer = [];
+[filename, pathname] = uigetfile('.mat');
+load([pathname, filename]);
+if ~exist('layer')
+    warndlg('The correct file was not imported. Please check that you loaded the right file.')
+    return
+elseif ~isfield(layer, 'd') || ~isfield(layer, 'meandf') || ~isfield(layer, 'meandg') || ~isfield(layer, 'prop')
+    warndlg('The file is missing necessary fields in the structure "layer".')
+    return
+end
+
+for i = 1:max(size(layer)) %Import the layer information into the table
+    if i == 1
+        handles.layerpropertytable.Data{i,1} = num2str(layer(i).d);
+    else
+        handles.layerpropertytable.Data{i,1} = num2str(layer(i).d-layer(i-1).d);
+    end
+    handles.layerpropertytable.Data{i,2} = num2str(layer(i).prop);
+end
+
+set(handles.delfcalc1, 'string', commanumber(layer(end).meandf(1)))
+set(handles.delfcalc3, 'string', commanumber(layer(end).meandf(3)))
+set(handles.delfcalc5, 'string', commanumber(layer(end).meandf(5)))
+set(handles.delgcalc1, 'string', commanumber(layer(end).meandg(1)))
+set(handles.delgcalc3, 'string', commanumber(layer(end).meandg(3)))
+set(handles.delgcalc5, 'string', commanumber(layer(end).meandg(5)))
+
+set(handles.(['layer' num2str(max(size(layer)))]), 'value', 1);
+setlayercheckmarks(hObject, handles, max(size(layer)));
+set(handles.thickness, 'string', num2str(layer(end).d, 3));
+
+handles.layer = layer;
+
+guidata(hObject, handles)
+
+function layer1_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 1)
+
+function layer2_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 2)
+
+function layer3_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 3)
+
+function layer4_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 4)
+
+function layer5_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 5)
+
+function layer6_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 6)
+
+function layer7_Callback(hObject, eventdata, handles)
+setlayercheckmarks(hObject, handles, 7)
+
+function setlayercheckmarks(hObject, handles, number)
+%This function makes sure that, when checking or unchecking a checkmark,
+%all of the lower layers remain and the upper layers are removed, since you
+%can't select only some of the layers.
+toggle = get(handles.(['layer' num2str(number)]), 'value');
+for i = 1:7
+    set(handles.(['layer' num2str(i)]), 'value', i<=number);
+end
+set(handles.(['layer' num2str(number)]), 'value', toggle)
+drawnow;
+calc_Callback(hObject, 0, handles)
+
+if isstruct(handles.layer) %If there's data saved, update the displayed df and dg data
+    if toggle
+        numlayer = number;
+    else
+        numlayer =  number - 1;
+    end
+    set(handles.delfcalc1, 'string', commanumber(handles.layer(numlayer).meandf(1)))
+    set(handles.delfcalc3, 'string', commanumber(handles.layer(numlayer).meandf(3)))
+    set(handles.delfcalc5, 'string', commanumber(handles.layer(numlayer).meandf(5)))
+    set(handles.delgcalc1, 'string', commanumber(handles.layer(numlayer).meandg(1)))
+    set(handles.delgcalc3, 'string', commanumber(handles.layer(numlayer).meandg(3)))
+    set(handles.delgcalc5, 'string', commanumber(handles.layer(numlayer).meandg(5)))  
+    set(handles.thickness, 'string', num2str(handles.layer(numlayer).d, 3));
+end
+    
