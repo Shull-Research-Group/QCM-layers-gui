@@ -1398,6 +1398,13 @@ function importlayers_Callback(hObject, eventdata, handles)
 handles.layer = [];
 [filename, pathname] = uigetfile('.mat');
 load([pathname, filename]);
+if ~exist('layer')
+    warndlg('The correct file was not imported. Please check that you loaded the right file.')
+    return
+elseif ~isfield(layer, 'd') || ~isfield(layer, 'meandf') || ~isfield(layer, 'meandg') || ~isfield(layer, 'prop')
+    warndlg('The file is missing necessary fields in the structure "layer".')
+    return
+end
 
 for i = 1:max(size(layer)) %Import the layer information into the table
     if i == 1
